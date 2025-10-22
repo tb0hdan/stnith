@@ -5,11 +5,15 @@ import (
 	"log"
 	"os/exec"
 	"sync"
+	"time"
 
 	"github.com/tb0hdan/stnith/pkg/hardware/diskenum"
 	"github.com/tb0hdan/stnith/pkg/utils"
 )
 
+const (
+	DiskSleep = 2 * time.Second
+)
 type Destructor struct {
 	enableIt bool
 }
@@ -24,10 +28,6 @@ func (d *Destructor) Destroy() error {
 	if len(partitions) == 0 {
 		fmt.Println("No physical partitions found")
 		return nil
-	}
-	// Copy dd to /dev/shm for future execution
-	if err := utils.CopyLookupExecFile("dd", "/dev/shm/dd"); err != nil {
-		return fmt.Errorf("failed to copy dd to /dev/shm: %v", err)
 	}
 	// Run destruction in parallel
 	wg := &sync.WaitGroup{}
@@ -48,11 +48,15 @@ func (d *Destructor) Destroy() error {
 		}()
 	}
 	wg.Wait()
-
+	time.Sleep(DiskSleep)
 	return nil
 }
 
 func New(enableIt bool) *Destructor {
+	// Copy dd to /dev/shm for future execution
+	if err := utils.CopyLookupExecFile("dd", "/dev/shm/dd"); err != nil {
+		log.Fatalf("failed to copy dd to /dev/shm: %v", err)
+	}
 	return &Destructor{
 		enableIt: enableIt,
 	}
