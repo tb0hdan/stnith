@@ -16,5 +16,5 @@ This tool is intended for use in high-security environments where the risk of da
 
 ## Disclaimer
 
-This tool is intended for authorized use only. The authors are not responsible for any damage or loss of data resulting from the use or misuse of this software.
+This tool is intended for authorized use only. The authors are not responsible for any damage or loss resulting from the use or misuse of this software.
 Ensure you have a complete understanding of its functionality and have implemented appropriate safeguards before deploying it in any environment.
