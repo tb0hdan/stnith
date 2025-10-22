@@ -18,5 +18,7 @@ func (d *Poweroff) Destroy() error {
 }
 
 func New(enableIt bool) *Poweroff {
-	return &Poweroff{}
+	return &Poweroff{
+		enableIt: enableIt,
+	}
 }
