@@ -18,3 +18,27 @@ This tool is intended for use in high-security environments where the risk of da
 
 This tool is intended for authorized use only. The authors are not responsible for any damage or loss of data resulting from the use or misuse of this software.
 Ensure you have a complete understanding of its functionality and have implemented appropriate safeguards before deploying it in any environment.
+
+## Usage
+
+*WARNING: Due to safety reasons, binary versions of this software are not and will not be available. You must compile it yourself.*
+
+Currently available with Dead Man's Switch functionality. Requires `root` to proceed.
+
+1m before timer elapses:
+
+```bash
+stnith -dms 1m -disks
+```
+
+in the other console
+
+```bash
+stnith -reset
+```
+
+Once you've become used to it, you can enable destruction mode *at your own risk*:
+
+```bash
+stnith -dms 1w -disks -enable-it    
+```

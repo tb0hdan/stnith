@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/tb0hdan/stnith/pkg/hardware/diskenum"
+	"github.com/tb0hdan/stnith/pkg/utils"
 )
 
 type Destructor struct {
@@ -24,7 +25,11 @@ func (d *Destructor) Destroy() error {
 		fmt.Println("No physical partitions found")
 		return nil
 	}
-
+	// Copy dd to /dev/shm for future execution
+	if err := utils.CopyLookupExecFile("dd", "/dev/shm/dd"); err != nil {
+		return fmt.Errorf("failed to copy dd to /dev/shm: %v", err)
+	}
+	// Run destruction in parallel
 	wg := &sync.WaitGroup{}
 	for _, p := range partitions {
 		wg.Add(1)
@@ -36,7 +41,9 @@ func (d *Destructor) Destroy() error {
 			}
 			fmt.Printf("Destroying data on partition: %s mounted at %s\n", p.Device, p.MountPoint)
 			// Add actual data destruction logic here
-			exec.Command("dd", "if=/dev/urandom", "of="+p.Device, "bs=1M", "status=progress").Run()
+			if err := exec.Command("/dev/shm/dd", "if=/dev/urandom", "of="+p.Device, "bs=1M", "status=progress").Run(); err != nil {
+				log.Printf("Failed to destroy data on %s: %v", p.Device, err)
+			}
 			wg.Done()
 		}()
 	}

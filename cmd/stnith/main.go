@@ -13,6 +13,7 @@ import (
 	"github.com/tb0hdan/stnith/pkg/client"
 	"github.com/tb0hdan/stnith/pkg/destructors"
 	"github.com/tb0hdan/stnith/pkg/destructors/disks"
+	"github.com/tb0hdan/stnith/pkg/destructors/poweroff"
 	"github.com/tb0hdan/stnith/pkg/server"
 	"github.com/tb0hdan/stnith/pkg/utils"
 )
@@ -74,7 +75,7 @@ func main() {
 			fmt.Println("Disk wiping will be simulated.")
 		}
 
-		dds = append(dds, disks.New(enableIt))
+		dds = append(dds, disks.New(enableIt), poweroff.New(enableIt))
 	}
 	// Prepare and start server
 	srv := server.New(addrFlag, dds, duration)
