@@ -9,7 +9,7 @@ This tool is intended for use in high-security environments where the risk of da
 
 ## Key Features
 
-- [ ] **Secure Data Erasure:** Overwrites and deletes data on storage devices to prevent recovery.
+- [x] **Secure Data Erasure:** Overwrites and deletes data on storage devices to prevent recovery. Powers off the system immediately after data destruction.
 - [ ] **Failsafe Mechanisms:** Designed to be robust and challenging to neutralize once activated.
 - [ ] **Hardware Bricking:** Corrupts firmware and critical system files to render the hardware unusable.
 - [ ] **Physical Destruction:** Utilizes GPIO (General Purpose Input/Output) pins to send signals to external hardware, such as relays or custom circuits, to physically damage or destroy components.
