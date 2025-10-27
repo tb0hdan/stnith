@@ -14,6 +14,8 @@ import (
 	"github.com/tb0hdan/stnith/pkg/destructors"
 	"github.com/tb0hdan/stnith/pkg/destructors/disks"
 	"github.com/tb0hdan/stnith/pkg/destructors/poweroff"
+	"github.com/tb0hdan/stnith/pkg/disablers"
+	"github.com/tb0hdan/stnith/pkg/disablers/mac"
 	"github.com/tb0hdan/stnith/pkg/server"
 	"github.com/tb0hdan/stnith/pkg/utils"
 )
@@ -67,6 +69,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Initialize disablers - they will be called when timer expires
+	dis := make([]disablers.Disabler, 0)
+	macDisabler := mac.New(enableIt)
+	dis = append(dis, macDisabler)
+
 	dds := make([]destructors.Destructor, 0)
 	if wipeDiskFlag {
 		if enableIt {
@@ -78,7 +85,7 @@ func main() {
 		dds = append(dds, disks.New(enableIt), poweroff.New(enableIt))
 	}
 	// Prepare and start server
-	srv := server.New(addrFlag, dds, duration)
+	srv := server.New(addrFlag, dis, dds, duration)
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 

@@ -1,24 +1,22 @@
 package poweroff
 
 import (
-	"fmt"
-	"syscall"
+	"log"
 )
 
-type Poweroff struct {
+type PowerOff struct {
 	enableIt bool
 }
 
-func (d *Poweroff) Destroy() error {
-	if !d.enableIt {
-		fmt.Println("Poweroff will be simulated. Enable it to actually power off the system.")
-		return nil
-	}
-	return syscall.Reboot(syscall.LINUX_REBOOT_CMD_POWER_OFF)
+func (p *PowerOff) Destroy() error {
+	return p.platformPowerOff()
 }
 
-func New(enableIt bool) *Poweroff {
-	return &Poweroff{
+func New(enableIt bool) *PowerOff {
+	if err := platformInit(); err != nil {
+		log.Fatalf("failed to initialize platform-specific resources: %v", err)
+	}
+	return &PowerOff{
 		enableIt: enableIt,
 	}
 }

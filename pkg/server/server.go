@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/tb0hdan/stnith/pkg/destructors"
+	"github.com/tb0hdan/stnith/pkg/disablers"
 )
 
 type Server struct {
@@ -17,6 +18,7 @@ type Server struct {
 	timerMutex       sync.Mutex
 	timer            *time.Timer
 	endTime          time.Time
+	disablers        []disablers.Disabler
 	destructors      []destructors.Destructor
 	originalDuration time.Duration
 }
@@ -120,11 +122,25 @@ func (s *Server) Shutdown(ctx context.Context) error {
 }
 
 func (s *Server) timerExpired() {
+	fmt.Println("\nTimer expired!")
+
+	// First, disable security systems if any disablers are configured
+	if len(s.disablers) > 0 {
+		fmt.Println("Calling disablers...")
+		for _, disabler := range s.disablers {
+			if err := disabler.Disable(); err != nil {
+				log.Printf("Disabler error: %v", err)
+			}
+		}
+		fmt.Println("All disablers have been called.")
+	}
+
+	// Then, execute destructors
 	if len(s.destructors) == 0 {
 		fmt.Println("No destructors defined, exiting.")
 		os.Exit(0)
 	}
-	fmt.Println("\nTimer expired, calling destructors...")
+	fmt.Println("Calling destructors...")
 	for _, destructor := range s.destructors {
 		if err := destructor.Destroy(); err != nil {
 			log.Printf("Destructor error: %v", err)
@@ -134,10 +150,11 @@ func (s *Server) timerExpired() {
 	os.Exit(0)
 }
 
-func New(addr string, destructors []destructors.Destructor, originalDuration time.Duration) *Server {
+func New(addr string, disablers []disablers.Disabler, destructors []destructors.Destructor, originalDuration time.Duration) *Server {
 	return &Server{
 		Addr:             addr,
 		timerMutex:       sync.Mutex{},
+		disablers:        disablers,
 		destructors:      destructors,
 		originalDuration: originalDuration,
 	}
