@@ -69,17 +69,17 @@ func (de *darwinEnumerator) GetPartitions() ([]Partition, error) {
 
 func isPhysicalDeviceDarwin(device, fsType string) bool {
 	excludedFS := map[string]bool{
-		"devfs":   true,
-		"autofs":  true,
-		"fdesc":   true,
-		"nullfs":  true,
-		"vmhgfs":  true,
-		"mtmfs":   true,
-		"nfs":     true,
-		"smbfs":   true,
-		"afpfs":   true,
-		"ftp":     true,
-		"webdav":  true,
+		"devfs":  true,
+		"autofs": true,
+		"fdesc":  true,
+		"nullfs": true,
+		"vmhgfs": true,
+		"mtmfs":  true,
+		"nfs":    true,
+		"smbfs":  true,
+		"afpfs":  true,
+		"ftp":    true,
+		"webdav": true,
 	}
 
 	if excludedFS[fsType] {

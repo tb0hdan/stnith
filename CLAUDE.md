@@ -8,6 +8,7 @@
 - Lint: `make lint`
 - Test: `make test`
 - Build: `make build`
+- Goimports: `find ./ -type f -iname "*.go" -exec goimports -w {} \;`
 
 ## Important Files
 - docs/PROJECT_NOTES.md - Contains project overview, goals, and current implementation status

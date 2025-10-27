@@ -5,8 +5,6 @@ package diskenum
 import (
 	"fmt"
 	"os"
-	"path/filepath"
-	"strings"
 	"syscall"
 	"unsafe"
 )
@@ -18,11 +16,11 @@ func newEnumerator() DiskEnumerator {
 }
 
 var (
-	kernel32           = syscall.NewLazyDLL("kernel32.dll")
-	procGetLogicalDrives = kernel32.NewProc("GetLogicalDrives")
+	kernel32                 = syscall.NewLazyDLL("kernel32.dll")
+	procGetLogicalDrives     = kernel32.NewProc("GetLogicalDrives")
 	procGetVolumeInformation = kernel32.NewProc("GetVolumeInformationW")
-	procGetDiskFreeSpaceEx = kernel32.NewProc("GetDiskFreeSpaceExW")
-	procGetDriveType = kernel32.NewProc("GetDriveTypeW")
+	procGetDiskFreeSpaceEx   = kernel32.NewProc("GetDiskFreeSpaceExW")
+	procGetDriveType         = kernel32.NewProc("GetDriveTypeW")
 )
 
 const (

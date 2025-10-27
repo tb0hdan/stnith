@@ -13,7 +13,8 @@ func (p *PowerOff) platformPowerOff() error {
 		return nil
 	}
 
-	// On macOS, use the shutdown command
+	// On macOS, there is no reliable syscall to power off the system.
+	// Therefore, we use the shutdown command.
 	// -h: halt after shutdown
 	// now: shutdown immediately
 	cmd := exec.Command("shutdown", "-h", "now")
