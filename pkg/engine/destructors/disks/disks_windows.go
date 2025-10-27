@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/tb0hdan/stnith/pkg/hardware/diskenum"
+	"github.com/tb0hdan/stnith/pkg/engine/hardware/diskenum"
 )
 
 func (d *Destructor) platformDestroy() error {

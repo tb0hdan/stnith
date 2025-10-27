@@ -6,7 +6,7 @@ import (
 	"os"
 	"text/tabwriter"
 
-	"github.com/tb0hdan/stnith/pkg/hardware/diskenum"
+	"github.com/tb0hdan/stnith/pkg/engine/hardware/diskenum"
 )
 
 func main() {

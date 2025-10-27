@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tb0hdan/stnith/pkg/destructors"
-	"github.com/tb0hdan/stnith/pkg/disablers"
-	"github.com/tb0hdan/stnith/pkg/failsafes"
+	"github.com/tb0hdan/stnith/pkg/engine/destructors"
+	"github.com/tb0hdan/stnith/pkg/engine/disablers"
+	"github.com/tb0hdan/stnith/pkg/engine/failsafes"
 )
 
 type Server struct {

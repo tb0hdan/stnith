@@ -1,4 +1,4 @@
-//go:build linux
+//go:build darwin
 
 package disks
 
@@ -7,9 +7,11 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 	"sync"
 
-	"github.com/tb0hdan/stnith/pkg/hardware/diskenum"
+	"github.com/tb0hdan/stnith/pkg/engine/hardware/diskenum"
 	"github.com/tb0hdan/stnith/pkg/utils"
 )
 
@@ -37,15 +39,18 @@ func (d *Destructor) platformDestroy() error {
 
 			fmt.Printf("Destroying data on partition: %s mounted at %s\n", partition.Device, partition.MountPoint)
 
-			ddPath := "/dev/shm/dd"
+			tmpDir := os.TempDir()
+			ddPath := filepath.Join(tmpDir, "dd")
 			if _, err := os.Stat(ddPath); os.IsNotExist(err) {
 				log.Printf("dd binary not found at %s", ddPath)
 				return
 			}
 
-			cmd := exec.Command(ddPath, "if=/dev/urandom", "of="+partition.Device, "bs=1M", "status=progress")
+			device := convertToRawDevice(partition.Device)
+
+			cmd := exec.Command(ddPath, "if=/dev/urandom", "of="+device, "bs=1048576", "status=progress")
 			if err := cmd.Run(); err != nil {
-				log.Printf("Failed to destroy data on %s: %v", partition.Device, err)
+				log.Printf("Failed to destroy data on %s: %v", device, err)
 			}
 		}(p)
 	}
@@ -54,8 +59,18 @@ func (d *Destructor) platformDestroy() error {
 }
 
 func platformInit() error {
-	if err := utils.CopyLookupExecFile("dd", "/dev/shm/dd"); err != nil {
-		return fmt.Errorf("failed to copy dd to /dev/shm: %w", err)
+	tmpDir := os.TempDir()
+	ddPath := filepath.Join(tmpDir, "dd")
+
+	if err := utils.CopyLookupExecFile("dd", ddPath); err != nil {
+		return fmt.Errorf("failed to copy dd to %s: %w", ddPath, err)
 	}
 	return nil
+}
+
+func convertToRawDevice(device string) string {
+	if strings.HasPrefix(device, "/dev/disk") {
+		return strings.Replace(device, "/dev/disk", "/dev/rdisk", 1)
+	}
+	return device
 }

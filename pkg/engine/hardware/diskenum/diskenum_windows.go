@@ -5,8 +5,6 @@ package diskenum
 import (
 	"fmt"
 	"log"
-
-	"github.com/StackExchange/wmi"
 )
 
 type windowsEnumerator struct{}
