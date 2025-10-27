@@ -14,6 +14,12 @@ This tool is intended for use in high-security environments where the risk of da
 - [ ] **Hardware Bricking:** Corrupts firmware and critical system files to render the hardware unusable.
 - [ ] **Physical Destruction:** Utilizes GPIO (General Purpose Input/Output) pins to send signals to external hardware, such as relays or custom circuits, to physically damage or destroy components.
 
+## Supported Platforms
+
+- Linux (primary)
+- macOS (limited functionality)
+- Windows (planned for future releases)
+
 ## Disclaimer
 
 This tool is intended for authorized use only. The authors are not responsible for any damage or loss resulting from the use or misuse of this software.
