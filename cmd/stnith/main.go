@@ -16,6 +16,8 @@ import (
 	"github.com/tb0hdan/stnith/pkg/destructors/poweroff"
 	"github.com/tb0hdan/stnith/pkg/disablers"
 	"github.com/tb0hdan/stnith/pkg/disablers/mac"
+	"github.com/tb0hdan/stnith/pkg/failsafes"
+	"github.com/tb0hdan/stnith/pkg/failsafes/process"
 	"github.com/tb0hdan/stnith/pkg/server"
 	"github.com/tb0hdan/stnith/pkg/utils"
 	"github.com/tb0hdan/stnith/pkg/utils/permissions"
@@ -70,6 +72,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Initialize failsafes - they will be triggered when timer expires to hide the process
+	fss := make([]failsafes.Failsafe, 0)
+	processHider := process.New(enableIt)
+	fss = append(fss, processHider)
+
 	// Initialize disablers - they will be called when timer expires
 	dis := make([]disablers.Disabler, 0)
 	macDisabler := mac.New(enableIt)
@@ -86,7 +93,7 @@ func main() {
 		dds = append(dds, disks.New(enableIt), poweroff.New(enableIt))
 	}
 	// Prepare and start server
-	srv := server.New(addrFlag, dis, dds, duration)
+	srv := server.New(addrFlag, dis, dds, fss, duration)
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 

@@ -4,10 +4,11 @@ package mac
 
 import (
 	"fmt"
-	"golang.org/x/sys/windows/registry"
 	"os"
 	"os/exec"
 	"strings"
+
+	"golang.org/x/sys/windows/registry"
 )
 
 // platformDetect detects active MAC systems on Windows
