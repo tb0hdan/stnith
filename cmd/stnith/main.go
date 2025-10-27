@@ -18,6 +18,7 @@ import (
 	"github.com/tb0hdan/stnith/pkg/disablers/mac"
 	"github.com/tb0hdan/stnith/pkg/server"
 	"github.com/tb0hdan/stnith/pkg/utils"
+	"github.com/tb0hdan/stnith/pkg/utils/permissions"
 )
 
 const (
@@ -49,9 +50,9 @@ func main() {
 		return
 	}
 
-	// Check if running as root
-	if os.Geteuid() != 0 {
-		fmt.Fprintf(os.Stderr, "Error: This program must be run as root\n")
+	// Check if running as admin/root
+	if !permissions.IsAdmin() {
+		fmt.Fprintf(os.Stderr, "Error: This program must be run as admin/root\n")
 		os.Exit(1)
 	}
 
