@@ -9,7 +9,7 @@ import (
 
 func CopyFile(src, dst string) error {
 	// Open the source file
-	sourceFile, err := os.Open(src)
+	sourceFile, err := os.Open(src) //nolint:gosec
 	if err != nil {
 		return fmt.Errorf("failed to open source file: %w", err)
 	}
@@ -21,7 +21,7 @@ func CopyFile(src, dst string) error {
 	}()
 
 	// Create the destination file
-	destinationFile, err := os.Create(dst)
+	destinationFile, err := os.Create(dst) //nolint:gosec
 	if err != nil {
 		return fmt.Errorf("failed to create destination file: %w", err)
 	}
@@ -53,8 +53,9 @@ func CopyExecFile(src, dst string) error {
 		return err
 	}
 
-	// Make the destination file executable
-	err = os.Chmod(dst, 0755)
+	// Make the destination file executable (owner: read/write/execute, group/others: read/execute)
+	const execFilePermissions = 0o755
+	err = os.Chmod(dst, execFilePermissions)
 	if err != nil {
 		return fmt.Errorf("failed to make file executable: %w", err)
 	}

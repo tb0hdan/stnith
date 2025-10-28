@@ -10,3 +10,6 @@ build:
 
 clean:
 	@rm -rf build/
+
+test:
+	@go test -race -v ./...

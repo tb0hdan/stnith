@@ -18,6 +18,9 @@ import (
 	"github.com/tb0hdan/stnith/pkg/engine/disablers/mac"
 	"github.com/tb0hdan/stnith/pkg/engine/failsafes"
 	"github.com/tb0hdan/stnith/pkg/engine/failsafes/process"
+	"github.com/tb0hdan/stnith/pkg/engine/savers"
+	"github.com/tb0hdan/stnith/pkg/engine/savers/rsync"
+	"github.com/tb0hdan/stnith/pkg/engine/savers/scriptdir"
 	"github.com/tb0hdan/stnith/pkg/server"
 	"github.com/tb0hdan/stnith/pkg/utils"
 	"github.com/tb0hdan/stnith/pkg/utils/permissions"
@@ -28,11 +31,15 @@ const (
 )
 
 var (
-	durationFlag string
-	addrFlag     string
-	resetFlag    bool
-	wipeDiskFlag bool
-	enableIt     bool
+	durationFlag     string
+	addrFlag         string
+	resetFlag        bool
+	wipeDiskFlag     bool
+	enableIt         bool
+	rsyncFlag        bool
+	rsyncSrcFlag     string
+	rsyncDstFlag     string
+	scriptDirPathFlag string
 )
 
 func main() {
@@ -41,6 +48,10 @@ func main() {
 	flag.BoolVar(&wipeDiskFlag, "disks", false, "Wipe disks")
 	flag.StringVar(&addrFlag, "addr", "localhost:11234", "TCP address to listen on or connect to")
 	flag.BoolVar(&resetFlag, "reset", false, "Reset the timer by connecting to the server")
+	flag.BoolVar(&rsyncFlag, "rsync", false, "Enable rsync functionality")
+	flag.StringVar(&rsyncSrcFlag, "rsync-src", "", "Rsync source directory (has no effect if -rsync is disabled)")
+	flag.StringVar(&rsyncDstFlag, "rsync-dst", "", "Rsync destination directory (has no effect if -rsync is disabled)")
+	flag.StringVar(&scriptDirPathFlag, "saver-script-dir", "", "Directory containing executable scripts to run during save operation")
 	flag.Parse()
 
 	// Prepare client
@@ -82,6 +93,33 @@ func main() {
 	macDisabler := mac.New(enableIt)
 	dis = append(dis, macDisabler)
 
+	// Initialize savers - they will be called when timer expires before destructors
+	svs := make([]savers.Saver, 0)
+	if rsyncFlag {
+		if enableIt {
+			fmt.Println("Rsync is enabled.")
+		} else {
+			fmt.Println("Rsync will be simulated.")
+		}
+
+		if rsyncSrcFlag == "" || rsyncDstFlag == "" {
+			fmt.Fprintf(os.Stderr, "Error: both -rsync-src and -rsync-dst must be specified when -rsync is enabled\n")
+			os.Exit(1)
+		}
+
+		svs = append(svs, rsync.New(enableIt, rsyncSrcFlag, rsyncDstFlag))
+	}
+
+	if scriptDirPathFlag != "" {
+		if enableIt {
+			fmt.Println("Script directory execution is enabled.")
+		} else {
+			fmt.Println("Script directory execution will be simulated.")
+		}
+
+		svs = append(svs, scriptdir.New(enableIt, scriptDirPathFlag))
+	}
+
 	dds := make([]destructors.Destructor, 0)
 	if wipeDiskFlag {
 		if enableIt {
@@ -93,7 +131,7 @@ func main() {
 		dds = append(dds, disks.New(enableIt), poweroff.New(enableIt))
 	}
 	// Prepare and start server
-	srv := server.New(addrFlag, dis, dds, fss, duration)
+	srv := server.New(addrFlag, dis, dds, fss, svs, duration)
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 

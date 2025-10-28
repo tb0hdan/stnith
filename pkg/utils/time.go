@@ -22,15 +22,22 @@ func ParseDuration(s string) (time.Duration, error) {
 	unit := matches[2]
 	var duration time.Duration
 
+	const (
+		hoursPerDay   = 24
+		daysPerWeek   = 7
+		daysPerMonth  = 30
+		daysPerYear   = 365
+	)
+
 	switch unit {
 	case "yr":
-		duration = time.Duration(value) * 365 * 24 * time.Hour
+		duration = time.Duration(value) * daysPerYear * hoursPerDay * time.Hour
 	case "mo":
-		duration = time.Duration(value) * 30 * 24 * time.Hour
+		duration = time.Duration(value) * daysPerMonth * hoursPerDay * time.Hour
 	case "w":
-		duration = time.Duration(value) * 7 * 24 * time.Hour
+		duration = time.Duration(value) * daysPerWeek * hoursPerDay * time.Hour
 	case "d":
-		duration = time.Duration(value) * 24 * time.Hour
+		duration = time.Duration(value) * hoursPerDay * time.Hour
 	case "h":
 		duration = time.Duration(value) * time.Hour
 	case "m":

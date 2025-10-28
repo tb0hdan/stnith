@@ -34,7 +34,8 @@ func (le *linuxEnumerator) GetPartitions() ([]Partition, error) {
 		line := scanner.Text()
 		fields := strings.Fields(line)
 
-		if len(fields) < 4 {
+		const minExpectedFields = 4
+		if len(fields) < minExpectedFields {
 			continue
 		}
 
@@ -121,10 +122,14 @@ func fillPartitionStats(partition *Partition) error {
 		return err
 	}
 
-	blockSize := uint64(stat.Bsize)
-	partition.Size = blockSize * stat.Blocks
-	partition.Available = blockSize * stat.Bavail
-	partition.Used = partition.Size - (blockSize * stat.Bfree)
+	blockSize := stat.Bsize
+	if blockSize < 0 {
+		return fmt.Errorf("invalid block size: %d", blockSize)
+	}
+	blockSizeUint := uint64(blockSize)
+	partition.Size = blockSizeUint * stat.Blocks
+	partition.Available = blockSizeUint * stat.Bavail
+	partition.Used = partition.Size - (blockSizeUint * stat.Bfree)
 
 	return nil
 }
@@ -155,7 +160,7 @@ func getDeviceLabel(device string) string {
 	}
 
 	labelFile := fmt.Sprintf("/sys/class/block/%s/label", baseName)
-	if data, err := os.ReadFile(labelFile); err == nil {
+	if data, err := os.ReadFile(labelFile); err == nil { //nolint:gosec
 		return strings.TrimSpace(string(data))
 	}
 

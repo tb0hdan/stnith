@@ -28,14 +28,15 @@ func (c *Client) ResetTimer() {
 		os.Exit(1)
 	}
 
-	response := make([]byte, 1024)
-	n, err := conn.Read(response)
+	const responseBufferSize = 1024
+	response := make([]byte, responseBufferSize)
+	bytesRead, err := conn.Read(response)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to read response: %v\n", err)
 		os.Exit(1)
 	}
 
-	fmt.Print(string(response[:n]))
+	fmt.Print(string(response[:bytesRead]))
 }
 
 func New(addr string) *Client {

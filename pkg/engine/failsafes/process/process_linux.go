@@ -27,7 +27,7 @@ func (p *ProcessHider) hideLinux() error {
 
 func (p *ProcessHider) changeProcessName(newName string) error {
 	// Use prctl to change the process name
-	cmd := exec.Command("sh", "-c", fmt.Sprintf("echo '%s' > /proc/%d/comm", newName, p.pid))
+	cmd := exec.Command("sh", "-c", fmt.Sprintf("echo '%s' > /proc/%d/comm", newName, p.pid)) //nolint:gosec
 	return cmd.Run()
 }
 

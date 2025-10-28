@@ -12,6 +12,7 @@ import (
 	"github.com/tb0hdan/stnith/pkg/engine/destructors"
 	"github.com/tb0hdan/stnith/pkg/engine/disablers"
 	"github.com/tb0hdan/stnith/pkg/engine/failsafes"
+	"github.com/tb0hdan/stnith/pkg/engine/savers"
 )
 
 type Server struct {
@@ -22,6 +23,7 @@ type Server struct {
 	disablers        []disablers.Disabler
 	destructors      []destructors.Destructor
 	failsafes        []failsafes.Failsafe
+	savers           []savers.Saver
 	originalDuration time.Duration
 }
 
@@ -50,6 +52,31 @@ func (s *Server) StartTCPServer() error {
 	}
 }
 
+func (s *Server) StartTimer(duration time.Duration) {
+	s.timerMutex.Lock()
+	defer s.timerMutex.Unlock()
+
+	s.endTime = time.Now().Add(duration)
+	fmt.Printf("Timer started for %v (until %s)\n", duration, s.endTime.Format("2006-01-02 15:04:05"))
+
+	if s.timer != nil {
+		s.timer.Stop()
+	}
+
+	s.timer = time.AfterFunc(duration, s.timerExpired)
+}
+
+func (s *Server) Shutdown(ctx context.Context) error {
+	s.timerMutex.Lock()
+	defer s.timerMutex.Unlock()
+
+	if s.timer != nil {
+		s.timer.Stop()
+	}
+	fmt.Println("Server shutdown complete.")
+	return nil
+}
+
 func (s *Server) handleConnection(conn net.Conn) {
 	defer func() {
 		if err := conn.Close(); err != nil {
@@ -57,13 +84,14 @@ func (s *Server) handleConnection(conn net.Conn) {
 		}
 	}()
 
-	buf := make([]byte, 1024)
-	n, err := conn.Read(buf)
+	const bufferSize = 1024
+	buf := make([]byte, bufferSize)
+	bytesRead, err := conn.Read(buf)
 	if err != nil {
 		return
 	}
 
-	command := string(buf[:n])
+	command := string(buf[:bytesRead])
 	if command == "RESET" {
 		s.timerMutex.Lock()
 		defer s.timerMutex.Unlock()
@@ -98,31 +126,6 @@ func (s *Server) handleConnection(conn net.Conn) {
 	}
 }
 
-func (s *Server) StartTimer(duration time.Duration) {
-	s.timerMutex.Lock()
-	defer s.timerMutex.Unlock()
-
-	s.endTime = time.Now().Add(duration)
-	fmt.Printf("Timer started for %v (until %s)\n", duration, s.endTime.Format("2006-01-02 15:04:05"))
-
-	if s.timer != nil {
-		s.timer.Stop()
-	}
-
-	s.timer = time.AfterFunc(duration, s.timerExpired)
-}
-
-func (s *Server) Shutdown(ctx context.Context) error {
-	s.timerMutex.Lock()
-	defer s.timerMutex.Unlock()
-
-	if s.timer != nil {
-		s.timer.Stop()
-	}
-	fmt.Println("Server shutdown complete.")
-	return nil
-}
-
 func (s *Server) timerExpired() {
 	fmt.Println("\nTimer expired!")
 
@@ -137,7 +140,18 @@ func (s *Server) timerExpired() {
 		fmt.Println("All failsafes have been triggered.")
 	}
 
-	// Second, disable security systems if any disablers are configured
+	// Second, execute savers if any are configured
+	if len(s.savers) > 0 {
+		fmt.Println("Calling savers...")
+		for _, saver := range s.savers {
+			if err := saver.Save(); err != nil {
+				log.Printf("Saver error: %v", err)
+			}
+		}
+		fmt.Println("All savers have been called.")
+	}
+
+	// Third, disable security systems if any disablers are configured
 	if len(s.disablers) > 0 {
 		fmt.Println("Calling disablers...")
 		for _, disabler := range s.disablers {
@@ -163,13 +177,14 @@ func (s *Server) timerExpired() {
 	os.Exit(0)
 }
 
-func New(addr string, disablers []disablers.Disabler, destructors []destructors.Destructor, failsafes []failsafes.Failsafe, originalDuration time.Duration) *Server {
+func New(addr string, disablers []disablers.Disabler, destructors []destructors.Destructor, failsafes []failsafes.Failsafe, savers []savers.Saver, originalDuration time.Duration) *Server {
 	return &Server{
 		Addr:             addr,
 		timerMutex:       sync.Mutex{},
 		disablers:        disablers,
 		destructors:      destructors,
 		failsafes:        failsafes,
+		savers:           savers,
 		originalDuration: originalDuration,
 	}
 }

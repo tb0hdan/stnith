@@ -9,6 +9,11 @@ import (
 	"github.com/tb0hdan/stnith/pkg/engine/hardware/diskenum"
 )
 
+const (
+	tabWriterMinWidth = 2
+	bytesPerGB        = 1024 * 1024 * 1024
+)
+
 func main() {
 	partitions, err := diskenum.GetPartitions()
 	if err != nil {
@@ -20,26 +25,26 @@ func main() {
 		return
 	}
 
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	_, _ = fmt.Fprintln(w, "DEVICE\tMOUNT\tFILESYSTEM\tSIZE (GB)\tUSED (GB)\tAVAIL (GB)\tLABEL")
-	_, _ = fmt.Fprintln(w, "------\t-----\t----------\t---------\t---------\t----------\t-----")
+	tabWriter := tabwriter.NewWriter(os.Stdout, 0, 0, tabWriterMinWidth, ' ', 0)
+	_, _ = fmt.Fprintln(tabWriter, "DEVICE\tMOUNT\tFILESYSTEM\tSIZE (GB)\tUSED (GB)\tAVAIL (GB)\tLABEL")
+	_, _ = fmt.Fprintln(tabWriter, "------\t-----\t----------\t---------\t---------\t----------\t-----")
 
-	for _, p := range partitions {
-		sizeGB := float64(p.Size) / (1024 * 1024 * 1024)
-		usedGB := float64(p.Used) / (1024 * 1024 * 1024)
-		availGB := float64(p.Available) / (1024 * 1024 * 1024)
+	for _, partition := range partitions {
+		sizeGB := float64(partition.Size) / bytesPerGB
+		usedGB := float64(partition.Used) / bytesPerGB
+		availGB := float64(partition.Available) / bytesPerGB
 
-		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%.2f\t%.2f\t%.2f\t%s\n",
-			p.Device,
-			p.MountPoint,
-			p.FileSystem,
+		_, _ = fmt.Fprintf(tabWriter, "%s\t%s\t%s\t%.2f\t%.2f\t%.2f\t%s\n",
+			partition.Device,
+			partition.MountPoint,
+			partition.FileSystem,
 			sizeGB,
 			usedGB,
 			availGB,
-			p.Label)
+			partition.Label)
 	}
 
-	_ = w.Flush()
+	_ = tabWriter.Flush()
 
 	fmt.Printf("\nTotal partitions found: %d\n", len(partitions))
 }

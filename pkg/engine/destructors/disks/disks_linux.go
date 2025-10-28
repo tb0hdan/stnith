@@ -24,11 +24,11 @@ func (d *Destructor) platformDestroy() error {
 		return nil
 	}
 
-	wg := &sync.WaitGroup{}
-	for _, p := range partitions {
-		wg.Add(1)
+	waitGroup := &sync.WaitGroup{}
+	for _, partition := range partitions {
+		waitGroup.Add(1)
 		go func(partition diskenum.Partition) {
-			defer wg.Done()
+			defer waitGroup.Done()
 
 			if !d.enableIt {
 				fmt.Println("Data destruction is disabled. Skipping...")
@@ -43,13 +43,13 @@ func (d *Destructor) platformDestroy() error {
 				return
 			}
 
-			cmd := exec.Command(ddPath, "if=/dev/urandom", "of="+partition.Device, "bs=1M", "status=progress")
+			cmd := exec.Command(ddPath, "if=/dev/urandom", "of="+partition.Device, "bs=1M", "status=progress") //nolint:gosec
 			if err := cmd.Run(); err != nil {
 				log.Printf("Failed to destroy data on %s: %v", partition.Device, err)
 			}
-		}(p)
+		}(partition)
 	}
-	wg.Wait()
+	waitGroup.Wait()
 	return nil
 }
 
