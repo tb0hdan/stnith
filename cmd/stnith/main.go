@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/tb0hdan/stnith/pkg/client"
+	"github.com/tb0hdan/stnith/pkg/engine"
 	"github.com/tb0hdan/stnith/pkg/engine/destructors"
 	"github.com/tb0hdan/stnith/pkg/engine/destructors/disks"
 	"github.com/tb0hdan/stnith/pkg/engine/destructors/poweroff"
@@ -31,14 +32,14 @@ const (
 )
 
 var (
-	durationFlag     string
-	addrFlag         string
-	resetFlag        bool
-	wipeDiskFlag     bool
-	enableIt         bool
-	rsyncFlag        bool
-	rsyncSrcFlag     string
-	rsyncDstFlag     string
+	durationFlag      string
+	addrFlag          string
+	resetFlag         bool
+	wipeDiskFlag      bool
+	enableIt          bool
+	rsyncFlag         bool
+	rsyncSrcFlag      string
+	rsyncDstFlag      string
 	scriptDirPathFlag string
 )
 
@@ -84,17 +85,17 @@ func main() {
 	}
 
 	// Initialize failsafes - they will be triggered when timer expires to hide the process
-	fss := make([]failsafes.Failsafe, 0)
+	fss := make([]failsafes.FailsafeInterface, 0)
 	processHider := process.New(enableIt)
 	fss = append(fss, processHider)
 
 	// Initialize disablers - they will be called when timer expires
-	dis := make([]disablers.Disabler, 0)
+	dis := make([]disablers.DisablerInterface, 0)
 	macDisabler := mac.New(enableIt)
 	dis = append(dis, macDisabler)
 
 	// Initialize savers - they will be called when timer expires before destructors
-	svs := make([]savers.Saver, 0)
+	svs := make([]savers.SaverInterface, 0)
 	if rsyncFlag {
 		if enableIt {
 			fmt.Println("Rsync is enabled.")
@@ -120,7 +121,7 @@ func main() {
 		svs = append(svs, scriptdir.New(enableIt, scriptDirPathFlag))
 	}
 
-	dds := make([]destructors.Destructor, 0)
+	dds := make([]destructors.DestructorInterface, 0)
 	if wipeDiskFlag {
 		if enableIt {
 			fmt.Println("Disk wiping is enabled.")
@@ -130,8 +131,12 @@ func main() {
 
 		dds = append(dds, disks.New(enableIt), poweroff.New(enableIt))
 	}
-	// Prepare and start server
-	srv := server.New(addrFlag, dis, dds, fss, svs, duration)
+
+	// Create the engine with all the components
+	eng := engine.New(dis, dds, fss, svs)
+
+	// Prepare and start server with the engine
+	srv := server.New(addrFlag, eng, duration)
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 

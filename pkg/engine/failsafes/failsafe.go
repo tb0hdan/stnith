@@ -1,6 +1,6 @@
 package failsafes
 
-// Failsafe is the interface that all failsafes must implement.
-type Failsafe interface {
+// FailsafeInterface is the interface that all failsafes must implement.
+type FailsafeInterface interface {
 	Trigger() error
 }

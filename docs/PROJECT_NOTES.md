@@ -1,7 +1,7 @@
 # Project Notes - stnith
 
 ## Project Overview
-stnith is a Go project providing system utilities and destructive operations tools with client-server architecture support.
+stnith is an advanced infrastructure security tool with client-server architecture support.
 
 ## Goals
 - Provide cross-platform system utilities

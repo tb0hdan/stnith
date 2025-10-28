@@ -1,6 +1,6 @@
 package disablers
 
-// Disabler is the interface that all disablers must implement.
-type Disabler interface {
+// DisablerInterface is the interface that all disablers must implement.
+type DisablerInterface interface {
 	Disable() error
 }

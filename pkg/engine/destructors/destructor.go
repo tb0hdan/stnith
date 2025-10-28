@@ -1,5 +1,5 @@
 package destructors
 
-type Destructor interface {
+type DestructorInterface interface {
 	Destroy() error
 }

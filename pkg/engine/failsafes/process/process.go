@@ -12,7 +12,7 @@ type ProcessHider struct {
 	pid     int
 }
 
-func New(enabled bool) failsafes.Failsafe {
+func New(enabled bool) failsafes.FailsafeInterface {
 	return &ProcessHider{
 		enabled: enabled,
 		pid:     os.Getpid(),

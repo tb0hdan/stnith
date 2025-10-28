@@ -1,5 +1,5 @@
 package savers
 
-type Saver interface {
+type SaverInterface interface {
 	Save() error
 }

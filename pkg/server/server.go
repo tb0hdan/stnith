@@ -5,14 +5,10 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"os"
 	"sync"
 	"time"
 
-	"github.com/tb0hdan/stnith/pkg/engine/destructors"
-	"github.com/tb0hdan/stnith/pkg/engine/disablers"
-	"github.com/tb0hdan/stnith/pkg/engine/failsafes"
-	"github.com/tb0hdan/stnith/pkg/engine/savers"
+	"github.com/tb0hdan/stnith/pkg/engine"
 )
 
 type Server struct {
@@ -20,10 +16,7 @@ type Server struct {
 	timerMutex       sync.Mutex
 	timer            *time.Timer
 	endTime          time.Time
-	disablers        []disablers.Disabler
-	destructors      []destructors.Destructor
-	failsafes        []failsafes.Failsafe
-	savers           []savers.Saver
+	engine           engine.EngineInterface
 	originalDuration time.Duration
 }
 
@@ -63,7 +56,7 @@ func (s *Server) StartTimer(duration time.Duration) {
 		s.timer.Stop()
 	}
 
-	s.timer = time.AfterFunc(duration, s.timerExpired)
+	s.timer = time.AfterFunc(duration, s.engine.Run)
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {
@@ -103,7 +96,7 @@ func (s *Server) handleConnection(conn net.Conn) {
 				remaining = s.originalDuration
 				// Reset timer
 				s.timer.Stop()
-				s.timer = time.AfterFunc(remaining, s.timerExpired)
+				s.timer = time.AfterFunc(remaining, s.engine.Run)
 				s.endTime = time.Now().Add(remaining)
 				fmt.Printf("\nTimer reset! Remaining time: %v (until %s)\n", remaining.Round(time.Second), s.endTime.Format("2006-01-02 15:04:05"))
 				if _, err := fmt.Fprintf(conn, "Timer reset successfully. Remaining: %v\n", remaining.Round(time.Second)); err != nil {
@@ -126,65 +119,11 @@ func (s *Server) handleConnection(conn net.Conn) {
 	}
 }
 
-func (s *Server) timerExpired() {
-	fmt.Println("\nTimer expired!")
-
-	// First, trigger failsafes to hide the process if configured
-	if len(s.failsafes) > 0 {
-		fmt.Println("Triggering failsafes...")
-		for _, failsafe := range s.failsafes {
-			if err := failsafe.Trigger(); err != nil {
-				log.Printf("Failsafe error: %v", err)
-			}
-		}
-		fmt.Println("All failsafes have been triggered.")
-	}
-
-	// Second, execute savers if any are configured
-	if len(s.savers) > 0 {
-		fmt.Println("Calling savers...")
-		for _, saver := range s.savers {
-			if err := saver.Save(); err != nil {
-				log.Printf("Saver error: %v", err)
-			}
-		}
-		fmt.Println("All savers have been called.")
-	}
-
-	// Third, disable security systems if any disablers are configured
-	if len(s.disablers) > 0 {
-		fmt.Println("Calling disablers...")
-		for _, disabler := range s.disablers {
-			if err := disabler.Disable(); err != nil {
-				log.Printf("Disabler error: %v", err)
-			}
-		}
-		fmt.Println("All disablers have been called.")
-	}
-
-	// Finally, execute destructors
-	if len(s.destructors) == 0 {
-		fmt.Println("No destructors defined, exiting.")
-		os.Exit(0)
-	}
-	fmt.Println("Calling destructors...")
-	for _, destructor := range s.destructors {
-		if err := destructor.Destroy(); err != nil {
-			log.Printf("Destructor error: %v", err)
-		}
-	}
-	fmt.Println("All destructors have been called. Good luck.")
-	os.Exit(0)
-}
-
-func New(addr string, disablers []disablers.Disabler, destructors []destructors.Destructor, failsafes []failsafes.Failsafe, savers []savers.Saver, originalDuration time.Duration) *Server {
+func New(addr string, eng engine.EngineInterface, originalDuration time.Duration) *Server {
 	return &Server{
 		Addr:             addr,
 		timerMutex:       sync.Mutex{},
-		disablers:        disablers,
-		destructors:      destructors,
-		failsafes:        failsafes,
-		savers:           savers,
+		engine:           eng,
 		originalDuration: originalDuration,
 	}
 }
