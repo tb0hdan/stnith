@@ -5,10 +5,10 @@ import (
 	"log"
 	"os"
 
-	"github.com/tb0hdan/stnith/pkg/engine/destructors"
-	"github.com/tb0hdan/stnith/pkg/engine/disablers"
-	"github.com/tb0hdan/stnith/pkg/engine/failsafes"
-	"github.com/tb0hdan/stnith/pkg/engine/savers"
+	"stnith/pkg/engine/destructors"
+	"stnith/pkg/engine/disablers"
+	"stnith/pkg/engine/failsafes"
+	"stnith/pkg/engine/savers"
 )
 
 type EngineInterface interface {

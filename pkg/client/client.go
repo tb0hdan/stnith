@@ -10,11 +10,10 @@ type Client struct {
 	Addr string
 }
 
-func (c *Client) ResetTimer() {
+func (c *Client) ResetTimer() (string, error) {
 	conn, err := net.Dial("tcp", c.Addr)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to connect to timer server at %s: %v\n", c.Addr, err)
-		os.Exit(1)
+		return "", fmt.Errorf("failed to connect to timer server at %s: %w", c.Addr, err)
 	}
 	defer func() {
 		if err := conn.Close(); err != nil {
@@ -22,21 +21,19 @@ func (c *Client) ResetTimer() {
 		}
 	}()
 
-	_, err = conn.Write([]byte("RESET"))
+	_, err = conn.Write([]byte("RESET\n"))
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to send reset command: %v\n", err)
-		os.Exit(1)
+		return "", fmt.Errorf("failed to send reset command: %w", err)
 	}
 
 	const responseBufferSize = 1024
 	response := make([]byte, responseBufferSize)
 	bytesRead, err := conn.Read(response)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to read response: %v\n", err)
-		os.Exit(1)
+		return "", fmt.Errorf("failed to read response: %w", err)
 	}
 
-	fmt.Print(string(response[:bytesRead]))
+	return string(response[:bytesRead]), nil
 }
 
 func New(addr string) *Client {

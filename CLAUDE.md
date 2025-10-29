@@ -1,7 +1,8 @@
-# Claude Instructions
+# Instructions
 
 ## On Startup
 - Always read docs/PROJECT_NOTES.md first to understand the project context and current state.
+- Always follow Effective Go coding standards and best practices.
 - Never read README.md.
 
 ## Project Commands

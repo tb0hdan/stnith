@@ -5,6 +5,7 @@ package diskenum
 import (
 	"bufio"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -26,7 +27,9 @@ func (le *linuxEnumerator) GetPartitions() ([]Partition, error) {
 		return nil, fmt.Errorf("failed to open /proc/mounts: %w", err)
 	}
 	defer func() {
-		_ = file.Close()
+		if closeErr := file.Close(); closeErr != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to close /proc/mounts: %v\n", closeErr)
+		}
 	}()
 
 	scanner := bufio.NewScanner(file)
@@ -126,10 +129,29 @@ func fillPartitionStats(partition *Partition) error {
 	if blockSize < 0 {
 		return fmt.Errorf("invalid block size: %d", blockSize)
 	}
+	// Safe conversion since we've verified blockSize >= 0
 	blockSizeUint := uint64(blockSize)
+
+	// Check for potential overflow in multiplication
+	if stat.Blocks > 0 && blockSizeUint > math.MaxUint64/stat.Blocks {
+		return fmt.Errorf("size calculation would overflow: blockSize=%d, blocks=%d", blockSizeUint, stat.Blocks)
+	}
+	if stat.Bavail > 0 && blockSizeUint > math.MaxUint64/stat.Bavail {
+		return fmt.Errorf("available size calculation would overflow: blockSize=%d, bavail=%d", blockSizeUint, stat.Bavail)
+	}
+	if stat.Bfree > 0 && blockSizeUint > math.MaxUint64/stat.Bfree {
+		return fmt.Errorf("free size calculation would overflow: blockSize=%d, bfree=%d", blockSizeUint, stat.Bfree)
+	}
+
 	partition.Size = blockSizeUint * stat.Blocks
 	partition.Available = blockSizeUint * stat.Bavail
-	partition.Used = partition.Size - (blockSizeUint * stat.Bfree)
+	freeSize := blockSizeUint * stat.Bfree
+
+	// Check for underflow in subtraction
+	if partition.Size < freeSize {
+		return fmt.Errorf("used size calculation would underflow: size=%d, free=%d", partition.Size, freeSize)
+	}
+	partition.Used = partition.Size - freeSize
 
 	return nil
 }

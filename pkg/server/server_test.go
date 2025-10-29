@@ -14,7 +14,8 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"github.com/tb0hdan/stnith/pkg/engine"
+
+	"stnith/pkg/engine"
 )
 
 type MockEngine struct {
@@ -141,6 +142,8 @@ func (suite *ServerTestSuite) TestShutdown() {
 func (suite *ServerTestSuite) TestHandleConnectionReset() {
 	// Start server with a timer
 	suite.server.originalDuration = 5 * time.Second
+	// Set up mock expectations for the engine Run method (it may be called by timer)
+	suite.mockEngine.On("Run").Maybe()
 	suite.server.StartTimer(5 * time.Second)
 
 	// Create mock connection
@@ -154,8 +157,8 @@ func (suite *ServerTestSuite) TestHandleConnectionReset() {
 		done <- true
 	}()
 
-	// Send RESET command
-	_, err := client.Write([]byte("RESET"))
+	// Send RESET command with newline
+	_, err := client.Write([]byte("RESET\n"))
 	require.NoError(suite.T(), err)
 
 	// Read response
@@ -184,8 +187,8 @@ func (suite *ServerTestSuite) TestHandleConnectionNoTimer() {
 		done <- true
 	}()
 
-	// Send RESET command
-	_, err := client.Write([]byte("RESET"))
+	// Send RESET command with newline
+	_, err := client.Write([]byte("RESET\n"))
 	require.NoError(suite.T(), err)
 
 	// Read response
@@ -220,8 +223,8 @@ func (suite *ServerTestSuite) TestHandleConnectionExpiredTimer() {
 		done <- true
 	}()
 
-	// Send RESET command
-	_, err := client.Write([]byte("RESET"))
+	// Send RESET command with newline
+	_, err := client.Write([]byte("RESET\n"))
 	require.NoError(suite.T(), err)
 
 	// Read response
@@ -248,8 +251,8 @@ func (suite *ServerTestSuite) TestHandleConnectionUnknownCommand() {
 		done <- true
 	}()
 
-	// Send unknown command
-	_, err := client.Write([]byte("UNKNOWN"))
+	// Send unknown command with newline
+	_, err := client.Write([]byte("UNKNOWN\n"))
 	require.NoError(suite.T(), err)
 
 	// Read response
@@ -291,8 +294,8 @@ func (suite *ServerTestSuite) TestStartTCPServer() {
 	// Try to connect to the server
 	conn, err := net.Dial("tcp", addr)
 	if err == nil {
-		// Send a test command
-		conn.Write([]byte("RESET"))
+		// Send a test command with newline
+		conn.Write([]byte("RESET\n"))
 		buffer := make([]byte, 1024)
 		conn.Read(buffer)
 		conn.Close()
@@ -365,8 +368,8 @@ func (suite *ServerTestSuite) TestTimerReset() {
 		done <- true
 	}()
 
-	// Send RESET command
-	_, err := client.Write([]byte("RESET"))
+	// Send RESET command with newline
+	_, err := client.Write([]byte("RESET\n"))
 	require.NoError(suite.T(), err)
 
 	// Read response

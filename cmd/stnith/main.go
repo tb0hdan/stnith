@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -10,21 +11,21 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/tb0hdan/stnith/pkg/client"
-	"github.com/tb0hdan/stnith/pkg/engine"
-	"github.com/tb0hdan/stnith/pkg/engine/destructors"
-	"github.com/tb0hdan/stnith/pkg/engine/destructors/disks"
-	"github.com/tb0hdan/stnith/pkg/engine/destructors/poweroff"
-	"github.com/tb0hdan/stnith/pkg/engine/disablers"
-	"github.com/tb0hdan/stnith/pkg/engine/disablers/mac"
-	"github.com/tb0hdan/stnith/pkg/engine/failsafes"
-	"github.com/tb0hdan/stnith/pkg/engine/failsafes/process"
-	"github.com/tb0hdan/stnith/pkg/engine/savers"
-	"github.com/tb0hdan/stnith/pkg/engine/savers/rsync"
-	"github.com/tb0hdan/stnith/pkg/engine/savers/scriptdir"
-	"github.com/tb0hdan/stnith/pkg/server"
-	"github.com/tb0hdan/stnith/pkg/utils"
-	"github.com/tb0hdan/stnith/pkg/utils/permissions"
+	"stnith/pkg/client"
+	"stnith/pkg/engine"
+	"stnith/pkg/engine/destructors"
+	"stnith/pkg/engine/destructors/disks"
+	"stnith/pkg/engine/destructors/poweroff"
+	"stnith/pkg/engine/disablers"
+	"stnith/pkg/engine/disablers/mac"
+	"stnith/pkg/engine/failsafes"
+	"stnith/pkg/engine/failsafes/process"
+	"stnith/pkg/engine/savers"
+	"stnith/pkg/engine/savers/rsync"
+	"stnith/pkg/engine/savers/scriptdir"
+	"stnith/pkg/server"
+	"stnith/pkg/utils"
+	"stnith/pkg/utils/permissions"
 )
 
 const (
@@ -60,7 +61,12 @@ func main() {
 
 	// Can be run with user permissions as it only connects to the server.
 	if resetFlag {
-		c.ResetTimer()
+		response, err := c.ResetTimer()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error resetting timer: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Print(response)
 		return
 	}
 
@@ -144,7 +150,7 @@ func main() {
 	srv.StartTimer(duration)
 
 	go func() {
-		if err := srv.StartTCPServer(); err != nil {
+		if err := srv.StartTCPServerWithContext(ctx); err != nil && !errors.Is(err, context.Canceled) {
 			log.Fatalf("Failed to start TCP server: %v", err)
 		}
 	}()

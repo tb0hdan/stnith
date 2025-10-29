@@ -7,8 +7,16 @@ all: lint test build
 lint:
 	@golangci-lint run ./...
 
-build:
+build: build-linux build-darwin build-windows
+
+build-linux:
 	@go build -o build/stnith cmd/stnith/main.go
+
+build-darwin:
+	@GOOS=darwin GOARCH=arm64 go build -o build/stnith-darwin cmd/stnith/main.go
+
+build-windows:
+	@GOOS=windows GOARCH=amd64 go build -o build/stnith-windows.exe cmd/stnith/main.go
 
 clean:
 	@rm -rf build/

@@ -1,14 +1,17 @@
 package server
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
-	"github.com/tb0hdan/stnith/pkg/engine"
+	"stnith/pkg/engine"
 )
 
 type Server struct {
@@ -18,14 +21,26 @@ type Server struct {
 	endTime          time.Time
 	engine           engine.EngineInterface
 	originalDuration time.Duration
+	listener         net.Listener
+	listenerMutex    sync.Mutex
+	shutdownCh       chan struct{}
 }
 
 func (s *Server) StartTCPServer() error {
+	return s.StartTCPServerWithContext(context.Background())
+}
+
+func (s *Server) StartTCPServerWithContext(ctx context.Context) error {
 	listener, err := net.Listen("tcp", s.Addr)
 	if err != nil {
 		log.Printf("Failed to start TCP server: %v", err)
 		return err
 	}
+
+	s.listenerMutex.Lock()
+	s.listener = listener
+	s.listenerMutex.Unlock()
+
 	defer func() {
 		if err := listener.Close(); err != nil {
 			log.Printf("Failed to close listener: %v", err)
@@ -34,14 +49,40 @@ func (s *Server) StartTCPServer() error {
 
 	fmt.Printf("Listening for reset commands on %s\n", s.Addr)
 
-	for {
-		conn, err := listener.Accept()
-		if err != nil {
-			log.Printf("Error accepting connection: %v", err)
-			continue
-		}
+	// Create a channel to receive accept results
+	acceptCh := make(chan struct {
+		conn net.Conn
+		err  error
+	})
 
-		go s.handleConnection(conn)
+	// Start goroutine to handle accepts
+	go func() {
+		for {
+			conn, err := listener.Accept()
+			select {
+			case acceptCh <- struct {
+				conn net.Conn
+				err  error
+			}{conn, err}:
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-s.shutdownCh:
+			return nil
+		case result := <-acceptCh:
+			if result.err != nil {
+				log.Printf("Error accepting connection: %v", result.err)
+				continue
+			}
+			go s.handleConnection(result.conn)
+		}
 	}
 }
 
@@ -60,12 +101,32 @@ func (s *Server) StartTimer(duration time.Duration) {
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {
-	s.timerMutex.Lock()
-	defer s.timerMutex.Unlock()
+	// Signal shutdown (only close if not already closed)
+	if s.shutdownCh != nil {
+		select {
+		case <-s.shutdownCh:
+			// Channel already closed
+		default:
+			close(s.shutdownCh)
+		}
+	}
 
+	// Close the listener to interrupt Accept()
+	s.listenerMutex.Lock()
+	if s.listener != nil {
+		if err := s.listener.Close(); err != nil {
+			log.Printf("Error closing listener: %v", err)
+		}
+	}
+	s.listenerMutex.Unlock()
+
+	// Stop the timer
+	s.timerMutex.Lock()
 	if s.timer != nil {
 		s.timer.Stop()
 	}
+	s.timerMutex.Unlock()
+
 	fmt.Println("Server shutdown complete.")
 	return nil
 }
@@ -77,25 +138,57 @@ func (s *Server) handleConnection(conn net.Conn) {
 		}
 	}()
 
-	const bufferSize = 1024
-	buf := make([]byte, bufferSize)
-	bytesRead, err := conn.Read(buf)
-	if err != nil {
+	// Set a reasonable timeout for reading
+	const readTimeout = 5 * time.Second
+	if err := conn.SetReadDeadline(time.Now().Add(readTimeout)); err != nil {
+		log.Printf("Failed to set read deadline: %v", err)
 		return
 	}
 
-	command := string(buf[:bytesRead])
+	// Use a limited reader to prevent excessive memory consumption
+	const maxCommandLength = 256 // Maximum command length allowed
+	limitedReader := io.LimitReader(conn, maxCommandLength+1)
+	reader := bufio.NewReader(limitedReader)
+
+	// Read until newline or max length
+	commandBytes, err := reader.ReadBytes('\n')
+	if err != nil && err != io.EOF {
+		log.Printf("Error reading command: %v", err)
+		if _, writeErr := conn.Write([]byte("Error reading command\n")); writeErr != nil {
+			log.Printf("Failed to write error response: %v", writeErr)
+		}
+		return
+	}
+
+	// Check if command was too long (no newline found within limit)
+	if len(commandBytes) > maxCommandLength {
+		if _, err := conn.Write([]byte("Command too long\n")); err != nil {
+			log.Printf("Failed to write response: %v", err)
+		}
+		return
+	}
+
+	// Trim whitespace and newlines
+	command := strings.TrimSpace(string(commandBytes))
+
+	// Validate command is not empty
+	if command == "" {
+		if _, err := conn.Write([]byte("Empty command\n")); err != nil {
+			log.Printf("Failed to write response: %v", err)
+		}
+		return
+	}
+
+	// Process the command
 	if command == "RESET" {
 		s.timerMutex.Lock()
 		defer s.timerMutex.Unlock()
 
 		if s.timer != nil {
-			remaining := time.Until(s.endTime)
-			if remaining > 0 {
-				// Adjust remaining
-				remaining = s.originalDuration
-				// Reset timer
-				s.timer.Stop()
+			// Stop timer first and check if it was successfully stopped
+			if s.timer.Stop() {
+				// Timer was successfully stopped, it hasn't fired yet
+				remaining := s.originalDuration
 				s.timer = time.AfterFunc(remaining, s.engine.Run)
 				s.endTime = time.Now().Add(remaining)
 				fmt.Printf("\nTimer reset! Remaining time: %v (until %s)\n", remaining.Round(time.Second), s.endTime.Format("2006-01-02 15:04:05"))
@@ -103,6 +196,7 @@ func (s *Server) handleConnection(conn net.Conn) {
 					log.Printf("Failed to write response: %v", err)
 				}
 			} else {
+				// Timer already expired or is in the process of firing
 				if _, err := conn.Write([]byte("Timer already expired\n")); err != nil {
 					log.Printf("Failed to write response: %v", err)
 				}
@@ -113,7 +207,7 @@ func (s *Server) handleConnection(conn net.Conn) {
 			}
 		}
 	} else {
-		if _, err := conn.Write([]byte("Unknown command\n")); err != nil {
+		if _, err := fmt.Fprintf(conn, "Unknown command: %s\n", command); err != nil {
 			log.Printf("Failed to write response: %v", err)
 		}
 	}
@@ -125,5 +219,6 @@ func New(addr string, eng engine.EngineInterface, originalDuration time.Duration
 		timerMutex:       sync.Mutex{},
 		engine:           eng,
 		originalDuration: originalDuration,
+		shutdownCh:       make(chan struct{}),
 	}
 }

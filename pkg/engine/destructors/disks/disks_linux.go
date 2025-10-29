@@ -9,8 +9,8 @@ import (
 	"os/exec"
 	"sync"
 
-	"github.com/tb0hdan/stnith/pkg/engine/hardware/diskenum"
-	"github.com/tb0hdan/stnith/pkg/utils"
+	"stnith/pkg/engine/hardware/diskenum"
+	"stnith/pkg/utils"
 )
 
 func (d *Destructor) platformDestroy() error {

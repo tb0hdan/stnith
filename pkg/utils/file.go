@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 )
@@ -14,9 +15,8 @@ func CopyFile(src, dst string) error {
 		return fmt.Errorf("failed to open source file: %w", err)
 	}
 	defer func() {
-		if err := sourceFile.Close(); err != nil {
-			// Log error but don't fail the operation since we're in a defer
-			_ = err
+		if closeErr := sourceFile.Close(); closeErr != nil {
+			log.Printf("Warning: failed to close source file %s: %v", src, closeErr)
 		}
 	}()
 
@@ -26,9 +26,8 @@ func CopyFile(src, dst string) error {
 		return fmt.Errorf("failed to create destination file: %w", err)
 	}
 	defer func() {
-		if err := destinationFile.Close(); err != nil {
-			// Log error but don't fail the operation since we're in a defer
-			_ = err
+		if closeErr := destinationFile.Close(); closeErr != nil {
+			log.Printf("Warning: failed to close destination file %s: %v", dst, closeErr)
 		}
 	}()
 

@@ -1,8 +1,6 @@
 package client
 
 import (
-	"bytes"
-	"io"
 	"net"
 	"os"
 	"sync"
@@ -74,13 +72,20 @@ func (suite *ClientTestSuite) TestResetTimerSuccess() {
 
 	// Capture stdout
 	oldStdout := os.Stdout
-	r, w, _ := os.Pipe()
+	_, w, _ := os.Pipe()
 	os.Stdout = w
 
 	// Run client in goroutine to avoid blocking
 	clientDone := make(chan bool)
+	clientErr := make(chan error, 1)
+	var clientResponse string
 	go func() {
-		suite.client.ResetTimer()
+		response, err := suite.client.ResetTimer()
+		if err != nil {
+			clientErr <- err
+		} else {
+			clientResponse = response
+		}
 		clientDone <- true
 	}()
 
@@ -97,11 +102,15 @@ func (suite *ClientTestSuite) TestResetTimerSuccess() {
 		w.Close()
 		os.Stdout = oldStdout
 
-		var buf bytes.Buffer
-		io.Copy(&buf, r)
-		output := buf.String()
+		// Check if there was an error
+		select {
+		case err := <-clientErr:
+			suite.T().Fatalf("Client error: %v", err)
+		default:
+		}
 
-		assert.Equal(suite.T(), serverResponse, output)
+		// Verify the response
+		assert.Equal(suite.T(), serverResponse, clientResponse)
 	case <-time.After(2 * time.Second):
 		w.Close()
 		os.Stdout = oldStdout
@@ -109,20 +118,12 @@ func (suite *ClientTestSuite) TestResetTimerSuccess() {
 	}
 }
 
-// Note: The following tests would normally test error conditions,
-// but since the client calls os.Exit() on errors, we cannot test
-// these conditions without refactoring the client code to return errors
-// instead of exiting. In a production environment, the client should be
-// refactored to return errors for better testability.
-
 func (suite *ClientTestSuite) TestResetTimerIntegration() {
-	// Protect stdout access with mutex
-	stdoutMutex.Lock()
-	defer stdoutMutex.Unlock()
-
-	// This is a simple integration test that verifies basic connectivity
+	// This integration test verifies basic connectivity and proper error handling
 	serverDone := make(chan bool)
 	clientDone := make(chan bool)
+	clientErr := make(chan error, 1)
+	var clientResponse string
 
 	go func() {
 		conn, err := suite.listener.Accept()
@@ -149,15 +150,14 @@ func (suite *ClientTestSuite) TestResetTimerIntegration() {
 		serverDone <- true
 	}()
 
-	// Capture stdout
-	oldStdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
 	// Run client in goroutine
 	go func() {
-		suite.client.ResetTimer()
-		w.Close()
+		response, err := suite.client.ResetTimer()
+		if err != nil {
+			clientErr <- err
+		} else {
+			clientResponse = response
+		}
 		clientDone <- true
 	}()
 
@@ -173,22 +173,21 @@ func (suite *ClientTestSuite) TestResetTimerIntegration() {
 		case <-clientDone:
 			clientCompleted = true
 		case <-timeout:
-			w.Close()
-			os.Stdout = oldStdout
 			suite.T().Fatal("Test timeout")
 			return
 		}
 	}
 
-	// Restore stdout and read captured output
-	os.Stdout = oldStdout
-	var buf bytes.Buffer
-	io.Copy(&buf, r)
-	output := buf.String()
+	// Check for client errors
+	select {
+	case err := <-clientErr:
+		suite.T().Fatalf("Client error: %v", err)
+	default:
+	}
 
-	// Verify some output was received
-	assert.NotEmpty(suite.T(), output, "Expected output from client but got none")
-	assert.Contains(suite.T(), output, "Timer reset")
+	// Verify the response
+	assert.NotEmpty(suite.T(), clientResponse, "Expected response from client but got none")
+	assert.Contains(suite.T(), clientResponse, "Timer reset")
 }
 
 func TestClientSuite(t *testing.T) {

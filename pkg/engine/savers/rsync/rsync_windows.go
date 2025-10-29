@@ -28,7 +28,7 @@ func (r *Rsync) platformRsync() error {
 	// /W:10 = wait 10 seconds between retries
 	// /V = verbose output
 	cmd := exec.Command("robocopy", src, dst, "/MIR", "/R:3", "/W:10", "/V")
-	output, err := cmd.CombinedOutput()
+	output, _ := cmd.CombinedOutput()
 
 	// Robocopy returns exit codes that are not necessarily errors
 	// 0 = No files copied, no failures

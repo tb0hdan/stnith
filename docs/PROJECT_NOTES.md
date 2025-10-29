@@ -15,12 +15,15 @@ stnith is an advanced infrastructure security tool with client-server architectu
 - Basic build configuration with Makefile
 - Linting configuration with .golangci.yml
 - Git repository initialized
+- **Engine architecture implemented**: Central coordination system for all components
 - Multiple components implemented:
-  - **Disk enumeration tool**: Cross-platform support (Linux and macOS), filters virtual filesystems, returns physical disk partitions with detailed information
-  - **Client-server architecture**: Basic client and server packages
-  - **Destructor modules**: Disk wiping and poweroff capabilities
-  - **Security disablers**: AppArmor and SELinux handlers
-  - **Utilities**: File and time helper functions
+  - **Disk enumeration tool**: Cross-platform support (Linux, macOS, Windows), filters virtual filesystems, returns physical disk partitions with detailed information
+  - **Client-server architecture**: Basic client and server packages with test coverage
+  - **Destructor modules**: Disk wiping and poweroff capabilities with platform-specific implementations
+  - **Security disablers**: MAC (Mandatory Access Control) handlers for different platforms
+  - **Failsafes**: Process management and protection mechanisms
+  - **Savers**: Data preservation modules including rsync and scriptdir functionality
+  - **Utilities**: File operations, time utilities, and permissions management with cross-platform support
 
 ## Directory Structure
 ```
@@ -32,18 +35,24 @@ stnith is an advanced infrastructure security tool with client-server architectu
 ├── docs/               # Documentation
 ├── pkg/                # Reusable packages
 │   ├── client/         # Client implementation
-│   ├── destructors/    # System destructor modules
-│   │   ├── disks/      # Disk wiping functionality
-│   │   └── poweroff/   # System poweroff functionality
-│   ├── disablers/      # Security disablers
-│   │   ├── apparmor/   # AppArmor disabler
-│   │   └── selinux/    # SELinux disabler
-│   ├── hardware/       # Hardware-related utilities
-│   │   └── diskenum/   # Disk enumeration package
+│   ├── engine/         # Core engine package
+│   │   ├── destructors/    # System destructor modules
+│   │   │   ├── disks/      # Disk wiping functionality
+│   │   │   └── poweroff/   # System poweroff functionality
+│   │   ├── disablers/      # Security disablers
+│   │   │   └── mac/        # MAC (Mandatory Access Control) handlers
+│   │   ├── failsafes/      # Protection mechanisms
+│   │   │   └── process/    # Process management failsafes
+│   │   ├── hardware/       # Hardware-related utilities
+│   │   │   └── diskenum/   # Disk enumeration package
+│   │   └── savers/         # Data preservation modules
+│   │       ├── rsync/      # Rsync-based data saver
+│   │       └── scriptdir/  # Script directory saver
 │   ├── server/         # Server implementation
 │   └── utils/          # Utility functions
-│       ├── file.go     # File operations
-│       └── time.go     # Time utilities
+│       ├── permissions/    # Permission management
+│       ├── file.go         # File operations
+│       └── time.go         # Time utilities
 ```
 
 ## Key Files
@@ -60,10 +69,13 @@ stnith is an advanced infrastructure security tool with client-server architectu
 - **pkg/** - Core library packages
   - `client/` - Client-side communication logic
   - `server/` - Server-side request handling
-  - `destructors/` - Modules for destructive operations
-  - `disablers/` - Security bypass modules
-  - `hardware/` - Hardware interaction utilities
-  - `utils/` - Common utility functions
+  - `engine/` - Central engine coordinating all operations
+    - `destructors/` - Modules for destructive operations (disk wiping, poweroff)
+    - `disablers/` - Security bypass modules (MAC handlers)
+    - `failsafes/` - Protection and recovery mechanisms
+    - `hardware/` - Hardware interaction utilities
+    - `savers/` - Data preservation and backup modules
+  - `utils/` - Common utility functions and cross-platform helpers
 
 ## Development Setup
 - Go module initialized (go.mod)
@@ -89,5 +101,8 @@ stnith is an advanced infrastructure security tool with client-server architectu
 ## Notes
 - Project uses Make for build automation
 - Follows standard Go project layout
-- Cross-platform support (Linux and macOS)
+- Full cross-platform support (Linux, macOS, Windows)
 - Modular architecture for easy extension
+- Engine-based design centralizes component coordination
+- Platform-specific implementations use build tags
+- Test coverage included for critical components

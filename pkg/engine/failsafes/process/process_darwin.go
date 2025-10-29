@@ -38,7 +38,7 @@ func (p *ProcessHider) changeProcessNameDarwin(newName string) error {
 
 func (p *ProcessHider) detachFromSession() error {
 	// Create a new session and process group
-	if err := syscall.Setsid(); err != nil {
+	if _, err := syscall.Setsid(); err != nil {
 		return fmt.Errorf("failed to create new session: %w", err)
 	}
 

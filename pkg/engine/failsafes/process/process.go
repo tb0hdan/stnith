@@ -4,7 +4,7 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/tb0hdan/stnith/pkg/engine/failsafes"
+	"stnith/pkg/engine/failsafes"
 )
 
 type ProcessHider struct {
